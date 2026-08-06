@@ -1,0 +1,32 @@
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# VS Code settings
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+
+# Operating system
+.DS_Store
+
+# Generated CSV files
+data/*.csv
+data/raw/*.csv
+data/processed/*.csv
+
+# Keep folder structure
+!data/.gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Personal notes
+phrases.txt
+info.txt
