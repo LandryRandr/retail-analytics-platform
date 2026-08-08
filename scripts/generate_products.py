@@ -2,6 +2,7 @@ import pandas as pd
 import random
 from pathlib import Path
 
+
 CATEGORIES = {
     "Smartphones": [
         "iPhone",

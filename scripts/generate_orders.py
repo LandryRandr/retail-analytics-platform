@@ -1,4 +1,4 @@
-""" IMPORTATION """
+# Library Importation
 import random
 import pandas as pd
 from faker import Faker
@@ -6,25 +6,31 @@ from pathlib import Path
 from datetime import date
 import sys
 
+# Value Importation
+from config import ORDER_GENERATION
+
 fake = Faker()
 orders = []
 
-quarter = sys.argv[1]
-year = int(sys.argv[2])
-NUMBER_OF_ORDERS = int(sys.argv[3])
-start_order_id = int(sys.argv[4])
+YEAR = int(sys.argv[1])
+quarter = sys.argv[2]
 
-QUARTERS = {
-    "Q1": (date(year, 1, 1), date(year, 3, 31)),
-    "Q2": (date(year, 4, 1), date(year, 6, 30)),
-    "Q3": (date(year, 7, 1), date(year, 9, 30)),
-    "Q4": (date(year, 10, 1), date(year, 12, 31)),
+QUARTER_DATES = {
+    "Q1": (date(YEAR, 1, 1), date(YEAR, 3, 31)),
+    "Q2": (date(YEAR, 4, 1), date(YEAR, 6, 30)),
+    "Q3": (date(YEAR, 7, 1), date(YEAR, 9, 30)),
+    "Q4": (date(YEAR, 10, 1), date(YEAR, 12, 31)),
 }
 
-start, end = QUARTERS[quarter]
 
-customers_df = pd.read_csv("data/raw/customers.csv")
-customers_df["signup_date"] = pd.to_datetime(customers_df["signup_date"])
+NUMBER_OF_ORDERS = ORDER_GENERATION[quarter]["orders"]
+start_order_id = ORDER_GENERATION[quarter]["start_order_id"]
+start, end = QUARTER_DATES[quarter]
+
+customers_df = pd.read_csv(f"data/raw/customers_{YEAR}.csv")
+customers_df["signup_date"] = pd.to_datetime(
+    customers_df["signup_date"],
+)
 customers_df = customers_df[
     customers_df["signup_date"] <= pd.Timestamp(end)
 ]
@@ -43,7 +49,7 @@ for order_id in range(start_order_id, NUMBER_OF_ORDERS + start_order_id):
 
 df = pd.DataFrame(orders)
 
-output_path = Path(f"data/raw/orders_{year}_{quarter}.csv")
+output_path = Path(f"data/raw/orders_{YEAR}_{quarter}.csv")
 output_path.parent.mkdir(parents=True, exist_ok=True)
 
 df.to_csv(output_path, index=False)
@@ -51,3 +57,4 @@ df.to_csv(output_path, index=False)
 
 print(f"{len(df)} orders generated.")
 print(f"File saved to: {output_path}")
+

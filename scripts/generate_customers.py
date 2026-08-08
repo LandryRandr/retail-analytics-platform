@@ -1,11 +1,14 @@
 from faker import Faker
 import pandas as pd
 from pathlib import Path
+import sys
 
 
 fake = Faker()
 NUMBER_OF_CUSTOMERS = 600
 customers = []
+
+year = sys.argv[1]
 
 for customer_id in range(1, NUMBER_OF_CUSTOMERS + 1):
     customers.append({
@@ -20,7 +23,7 @@ for customer_id in range(1, NUMBER_OF_CUSTOMERS + 1):
 
 df = pd.DataFrame(customers)
 
-output_path = Path(f"data/raw/customers.csv")
+output_path = Path(f"data/raw/customers_{year}.csv")
 output_path.parent.mkdir(parents=True, exist_ok=True)
 
 df.to_csv(output_path, index=False)

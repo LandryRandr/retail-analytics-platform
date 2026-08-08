@@ -1,10 +1,13 @@
+# Library Importation
 import random
 import pandas as pd
 from pathlib import Path
 import sys
 
-quarter = sys.argv[1]
-year = int(sys.argv[2])
+# Code
+
+year = int(sys.argv[1])
+quarter = sys.argv[2]
 
 orders_df = pd.read_csv(
     f"data/raw/orders_{year}_{quarter}.csv"
