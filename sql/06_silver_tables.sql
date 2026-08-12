@@ -1,1 +1,51 @@
+-- DUPLICATES INSPECTION
+-- Products
+SELECT
+    product_id,
+    COUNT(*) AS cnt
+FROM RETAIL_ANALYTICS.RAW_EXT.EXTERNAL_PRODUCTS
+GROUP BY product_id
+HAVING COUNT(*) > 1;
+
+-- CREATING PRODUCT TABLE
+CREATE TABLE IF NOT EXISTS RETAIL_ANALYTICS.SILVER.PRODUCTS (
+    product_id INTEGER NOT NULL,
+    product_name VARCHAR(150),
+    category VARCHAR(100),
+    unit_price NUMBER(10,2)
+);
+
+-- CREATING CUSTOMERS TABLE
+CREATE TABLE IF NOT EXISTS RETAIL_ANALYTICS.SILVER.CUSTOMERS (
+    customer_id INTEGER NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    email VARCHAR(255),
+    city VARCHAR(100),
+    country VARCHAR(100),
+    signup_date DATE,
+    year INTEGER
+);
+
+-- CREATING ORDERS TABLE
+CREATE TABLE IF NOT EXISTS RETAIL_ANALYTICS.SILVER.ORDERS (
+    order_id INTEGER NOT NULL,
+    customer_id INTEGER,
+    order_date DATE,
+    year INTEGER,
+    quarter VARCHAR(2)
+);
+
+
+-- CREATING ORDER_ITEMS TABLE
+CREATE TABLE IF NOT EXISTS RETAIL_ANALYTICS.SILVER.ORDER_ITEMS (
+    order_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER,
+    unit_price NUMBER(10,2),
+    year INTEGER,
+    quarter VARCHAR(2)
+);
+
+
 
