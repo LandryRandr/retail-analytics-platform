@@ -1,0 +1,275 @@
+
+GIT & GITHUB — GUIDE PRATIQUE
+================================
+Projet de référence : retail-analytics-platform
+Branche principale : main
+
+OBJECTIF
+--------
+Utiliser Git pour suivre les modifications du code sur son ordinateur
+et GitHub pour conserver une copie distante du projet.
+
+================================
+1. INSTALLATION ET CONFIGURATION
+================================
+
+Vérifier que Git est installé :
+git --version
+
+Configurer son identité (une seule fois par ordinateur) :
+git config --global user.name "Ton nom"
+git config --global user.email "ton-email"
+
+Vérifier la configuration :
+git config --global --list
+
+Vérifier que VS Code est installé et que Git est accessible
+depuis son terminal intégré.
+
+================================
+2. DÉMARRER UN NOUVEAU PROJET
+================================
+
+CAS : Le dossier du projet existe sur le PC, mais le dépôt
+GitHub est vide.
+
+ÉTAPE 1 — Créer le dépôt GitHub
+-------------------------------
+1. Ouvrir https://github.com
+2. Cliquer sur New repository.
+3. Donner un nom au dépôt.
+4. Choisir Public ou Private.
+5. Pour un projet déjà existant sur le PC, laisser décochés :
+   - Add a README file
+   - Add .gitignore
+   - Choose a license
+6. Cliquer sur Create repository.
+
+Le dépôt GitHub doit rester vide pour cette première synchronisation.
+
+ÉTAPE 2 — Ouvrir le projet dans VS Code
+---------------------------------------
+1. Ouvrir VS Code.
+2. Cliquer sur File > Open Folder.
+3. Sélectionner le dossier du projet.
+4. Ouvrir le terminal intégré : Terminal > New Terminal.
+
+ÉTAPE 3 — Initialiser Git
+-------------------------
+Dans le terminal, exécuter :
+
+git init
+git branch -M main
+
+ÉTAPE 4 — Connecter le projet à GitHub
+--------------------------------------
+Copier l'URL HTTPS du dépôt GitHub.
+
+Exemple :
+https://github.com/USERNAME/PROJECT.git
+
+Puis exécuter :
+
+git remote add origin https://github.com/USERNAME/PROJECT.git
+
+Vérifier la connexion au dépôt distant :
+git remote -v
+
+ÉTAPE 5 — Préparer les fichiers
+-------------------------------
+Créer un fichier .gitignore avant d'ajouter les fichiers.
+
+Exemples d'éléments à exclure :
+.env
+.venv/
+__pycache__/
+*.pyc
+.vscode/
+
+Attention : adapter le .gitignore au projet.
+Ne pas exclure des fichiers nécessaires au fonctionnement du projet.
+
+Ajouter les fichiers :
+git add .
+
+Vérifier les fichiers qui seront enregistrés :
+git status
+git diff --cached
+
+ÉTAPE 6 — Créer le premier commit
+---------------------------------
+git commit -m "Initial project setup"
+
+ÉTAPE 7 — Envoyer le projet sur GitHub
+--------------------------------------
+git push -u origin main
+
+Le projet est maintenant synchronisé avec GitHub.
+
+================================
+3. CONNECTER VS CODE À GITHUB
+================================
+
+1. Ouvrir VS Code.
+2. Cliquer sur l'icône Accounts en bas à gauche.
+3. Choisir Sign in with GitHub.
+4. Autoriser VS Code dans le navigateur.
+5. Revenir dans VS Code.
+
+Cette connexion facilite l'authentification et l'utilisation
+des fonctionnalités GitHub de VS Code.
+
+IMPORTANT :
+Git et GitHub sont deux choses différentes.
+Git suit les modifications localement.
+GitHub héberge le dépôt distant.
+VS Code est l'environnement de développement.
+
+On peut utiliser Git depuis le terminal de VS Code sans
+nécessairement installer une extension GitHub.
+
+================================
+4. ROUTINE AVANT DE TRAVAILLER
+================================
+
+Se placer dans le dossier du projet :
+
+cd chemin/vers/le/projet
+
+Récupérer les dernières modifications :
+
+git pull --rebase origin main
+
+Vérifier l'état du projet :
+
+git status
+
+================================
+5. ROUTINE APRÈS AVOIR TRAVAILLÉ
+================================
+
+1. Vérifier les modifications :
+
+git status
+git diff
+
+2. Ajouter les fichiers :
+
+git add .
+
+3. Vérifier ce qui sera enregistré :
+
+git diff --cached
+
+4. Créer un commit :
+
+git commit -m "Description des modifications"
+
+5. Envoyer sur GitHub :
+
+git push origin main
+
+================================
+6. COMMANDES UTILES
+================================
+
+git status
+Vérifier l'état du dépôt.
+
+git diff
+Voir les modifications non préparées.
+
+git add .
+Préparer tous les changements.
+
+git add fichier.py
+Préparer un seul fichier.
+
+git diff --cached
+Vérifier les changements préparés.
+
+git commit -m "Message"
+Enregistrer les modifications localement.
+
+git push origin main
+Envoyer les commits sur GitHub.
+
+git pull --rebase origin main
+Récupérer les changements distants.
+
+git log --oneline
+Consulter l'historique.
+
+git remote -v
+Voir les dépôts distants configurés.
+
+================================
+7. TÉLÉCHARGER UN PROJET EXISTANT
+================================
+
+Si le projet existe déjà sur GitHub et n'est pas encore
+présent sur l'ordinateur :
+
+git clone https://github.com/USERNAME/PROJECT.git
+
+Entrer dans le dossier :
+
+cd PROJECT
+
+Ouvrir dans VS Code :
+
+code .
+
+================================
+8. PRÉCAUTIONS IMPORTANTES
+================================
+
+- Ne jamais envoyer de clés AWS, mots de passe ou tokens.
+- Ne jamais envoyer de fichiers .env.
+- Exclure les environnements virtuels (.venv/).
+- Vérifier git status avant chaque commit.
+- Ne pas utiliser git push --force sans raison valable.
+- Ne pas utiliser git reset --hard sans comprendre les conséquences.
+- Ne pas écraser les changements distants ou locaux à l'aveugle.
+- En cas de conflit, résoudre le problème avant de continuer.
+
+================================
+9. ROUTINE À MÉMORISER
+================================
+
+AVANT DE TRAVAILLER :
+
+git pull --rebase origin main
+
+APRÈS AVOIR TRAVAILLÉ :
+
+git status
+git add .
+git diff --cached
+git commit -m "Description des modifications"
+git push origin main
+
+================================
+10. COMPRENDRE LE FONCTIONNEMENT
+================================
+
+PC :
+Contient le code source et l'environnement de développement.
+
+GIT :
+Suit les modifications et conserve l'historique localement.
+
+GITHUB :
+Héberge une copie distante du dépôt et facilite la sauvegarde
+et le partage du code.
+
+VS CODE :
+Permet de développer, modifier et gérer le projet.
+
+Principe :
+TRAVAIL LOCAL → GIT COMMIT → GITHUB PUSH
+
+================================
+FIN DU GUIDE
+================================
+

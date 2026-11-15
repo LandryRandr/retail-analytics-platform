@@ -1,0 +1,418 @@
+# PYTHON & AWS S3 — GUIDE PRATIQUE
+
+**Projet :** retail-analytics-platform  
+**Technologies :** Python, Boto3, AWS S3
+
+---
+
+## 1. OBJECTIF
+
+Utiliser Python et la bibliothèque Boto3 pour téléverser automatiquement des fichiers vers Amazon S3.
+
+Notre architecture :
+
+```text
+Fichiers CSV locaux
+       |
+       v
+Python (upload_file.py)
+       |
+       v
+Boto3 (AWS SDK)
+       |
+       v
+Amazon S3
+       |
+       v
+raw/
+```
+
+Le script détermine automatiquement le dossier de destination selon le nom du fichier.
+
+## 2. PRÉREQUIS
+
+Avant de commencer, il faut disposer de :
+
+- Un compte AWS.
+- Un bucket Amazon S3.
+- Python installé.
+- AWS CLI installé.
+- Un utilisateur ou rôle IAM autorisé à téléverser des fichiers.
+- Une configuration AWS valide.
+
+## 3. CONFIGURATION INITIALE D'AWS
+
+Cette étape est généralement réalisée une seule fois par environnement ou ordinateur.
+
+### Étape 1 — Créer les autorisations IAM
+
+Dans AWS Console :
+
+1. Ouvrir IAM.
+2. Créer ou sélectionner une identité IAM.
+3. Lui accorder uniquement les autorisations nécessaires sur le bucket S3.
+4. Configurer les identifiants ou le rôle approprié.
+
+Pour notre script, l'autorisation principale nécessaire est :
+
+` s3:PutObject `
+
+Elle doit être limitée au bucket et, idéalement, au préfixe `raw/*`.
+
+Pour vérifier l'existence du bucket avec certaines commandes AWS, des autorisations supplémentaires peuvent être nécessaires.
+
+Ne jamais utiliser les identifiants du compte root AWS.
+
+### Étape 2 — Configurer AWS CLI
+
+Dans le terminal :
+
+```bash
+aws configure
+```
+
+AWS demande :
+
+```text
+AWS Access Key ID
+AWS Secret Access Key
+Default region name
+Default output format
+```
+
+Exemple de région :
+
+```text
+eu-west-1
+```
+
+Ne jamais partager les clés AWS.
+
+### Étape 3 — Vérifier la connexion AWS
+
+Exécuter :
+
+```bash
+aws configure list
+```
+
+Puis :
+
+```bash
+aws sts get-caller-identity
+```
+
+Si cette dernière commande retourne les informations de ton identité AWS, l'authentification fonctionne.
+
+Attention : l'identité affichée doit être celle qui possède les autorisations nécessaires sur le bucket.
+
+## 4. PRÉPARER L'ENVIRONNEMENT PYTHON
+
+### Étape 1 — Créer un environnement virtuel
+
+Depuis le dossier du projet :
+
+```bash
+python -m venv .venv
+```
+
+Activer l'environnement sous Linux / WSL :
+
+```bash
+source .venv/bin/activate
+```
+
+Sous Windows PowerShell :
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+### Étape 2 — Installer Boto3
+
+```bash
+python -m pip install boto3
+```
+
+Vérifier l'installation :
+
+```bash
+python -m pip show boto3
+```
+
+### Étape 3 — Enregistrer les dépendances
+
+```bash
+python -m pip freeze > requirements.txt
+```
+
+Pour réinstaller les dépendances sur un autre ordinateur :
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+## 5. ORGANISATION DES FICHIERS PYTHON
+
+Structure recommandée :
+
+```text
+retail-analytics-platform/
+│
+├── scripts/
+│   ├── upload_file.py
+│   ├── upload_all.py
+│   └── config.py
+│
+├── data/
+│   ├── products.csv
+│   ├── customers_2024.csv
+│   ├── orders_2024_Q1.csv
+│   └── order_items_2024_Q1.csv
+│
+├── requirements.txt
+└── .gitignore
+```
+
+Le fichier `config.py` contient les paramètres de configuration du bucket.
+
+Exemple :
+
+```python
+BUCKET_NAME = "nom-de-ton-bucket"
+```
+
+Ne pas placer les clés AWS dans ce fichier.
+
+Si ce fichier contient des informations sensibles, ne pas le publier sur GitHub.
+
+## 6. COMPRENDRE LE SCRIPT upload_file.py
+
+Le script utilise deux bibliothèques :
+
+```python
+from pathlib import Path
+import boto3
+```
+
+- `Path` permet de manipuler les chemins et les noms des fichiers.
+- `boto3` permet à Python de communiquer avec AWS.
+
+Le script importe également :
+
+```python
+from config import BUCKET_NAME
+```
+
+Cela permet de centraliser le nom du bucket.
+
+### Fonctionnement
+
+La fonction :
+
+```python
+def upload_file(file_path: str):
+```
+
+reçoit le chemin d'un fichier local.
+
+Elle récupère :
+
+- Le nom complet du fichier.
+- Son nom sans extension.
+- Son type de dataset.
+
+Ensuite, elle détermine automatiquement le chemin S3.
+
+### Organisation des fichiers dans S3
+
+| Fichier local | Destination S3 |
+|---|---|
+| products.csv | raw/products/products.csv |
+| customers_2024.csv | raw/customers/year=2024/customers_2024.csv |
+| orders_2024_Q1.csv | raw/orders/year=2024/quarter=Q1/orders_2024_Q1.csv |
+| order_items_2024_Q1.csv | raw/order_items/year=2024/quarter=Q1/order_items_2024_Q1.csv |
+
+Le script utilise le nom du fichier pour déterminer son emplacement.
+
+Un nom non reconnu déclenche une erreur `ValueError`.
+
+### Téléversement
+
+L'instruction principale est :
+
+```python
+s3.upload_file(
+    str(path),
+    BUCKET_NAME,
+    s3_key
+)
+```
+
+Elle envoie le fichier local vers le bucket S3 à l'emplacement calculé.
+
+Boto3 utilise automatiquement la chaîne standard de recherche des identifiants AWS. Si AWS CLI est configuré, il peut récupérer les identifiants enregistrés.
+
+## 7. EXÉCUTER LE TÉLÉVERSEMENT
+
+IMPORTANT : définir une fonction ne signifie pas qu'elle est automatiquement exécutée.
+
+Pour téléverser un fichier, il faut appeler la fonction.
+
+Exemple dans un autre script :
+
+```python
+from scripts.upload_file import upload_file
+
+upload_file("data/products.csv")
+```
+
+Pour envoyer plusieurs fichiers :
+
+```python
+from scripts.upload_file import upload_file
+
+files = [
+    "data/products.csv",
+    "data/customers_2024.csv",
+    "data/orders_2024_Q1.csv",
+    "data/order_items_2024_Q1.csv"
+]
+
+for file in files:
+    upload_file(file)
+```
+
+Exécuter le script qui contient ces appels :
+
+```bash
+python upload_all.py
+```
+
+Le script `upload_file.py` peut aussi être exécuté directement, à condition qu'il contienne un bloc d'appel à la fonction.
+
+## 8. VÉRIFIER LES FICHIERS SUR S3
+
+Lister le contenu du bucket :
+
+```bash
+aws s3 ls s3://NOM_DU_BUCKET/
+```
+
+Lister les fichiers du dossier raw :
+
+```bash
+aws s3 ls s3://NOM_DU_BUCKET/raw/ --recursive
+```
+
+Pour vérifier un dataset particulier :
+
+```bash
+aws s3 ls s3://NOM_DU_BUCKET/raw/orders/ --recursive
+```
+
+Les fichiers doivent apparaître dans les chemins attendus.
+
+## 9. ERREURS FRÉQUENTES
+
+| Erreur | Cause possible |
+|---|---|
+| NoCredentialsError | Identifiants AWS absents ou non détectés |
+| AccessDenied | Permissions IAM insuffisantes |
+| NoSuchBucket | Nom du bucket incorrect |
+| FileNotFoundError | Chemin local incorrect |
+| ValueError: Unknown file format | Nom du fichier non reconnu |
+| NoRegionError | Région AWS non configurée |
+
+Toujours vérifier :
+
+1. L'authentification AWS.
+2. Les autorisations IAM.
+3. Le nom du bucket.
+4. Le chemin du fichier local.
+5. Le format du nom de fichier.
+
+## 10. SÉCURITÉ ET BONNES PRATIQUES
+
+- Ne jamais publier les clés AWS sur GitHub.
+- Ne jamais inclure les fichiers `.env` ou les secrets dans les commits.
+- Utiliser des permissions IAM limitées au strict nécessaire.
+- Garder le bucket privé.
+- Conserver les fichiers sources locaux.
+- Vérifier les chemins S3 avant chaque téléversement.
+- Éviter les doublons et les écrasements accidentels.
+- Utiliser un environnement virtuel Python.
+- Documenter les dépendances dans `requirements.txt`.
+
+## 11. ROUTINE À MÉMORISER
+
+### Avant le téléversement
+
+```bash
+cd ~/retail-analytics-platform
+source .venv/bin/activate
+aws sts get-caller-identity
+```
+
+### Lancer le téléversement
+
+```bash
+python scripts/upload_all.py
+```
+
+### Vérifier les résultats
+
+```bash
+aws s3 ls s3://NOM_DU_BUCKET/raw/ --recursive
+```
+
+### Désactiver l'environnement virtuel
+
+```bash
+deactivate
+```
+
+---
+
+## 12. COMPRENDRE L'ARCHITECTURE
+
+**Python :** automatise le traitement et l'envoi des fichiers.
+
+**Boto3 :** assure la communication entre Python et AWS.
+
+**IAM :** contrôle les autorisations d'accès aux ressources AWS.
+
+**AWS CLI :** permet de configurer et de tester l'environnement AWS.
+
+**Amazon S3 :** conserve les fichiers sources.
+
+**Snowflake :** pourra ensuite récupérer ces fichiers pour les traiter dans notre architecture Medallion.
+
+Flux global :
+
+```text
+CSV
+ |
+ v
+Python
+ |
+ v
+Boto3
+ |
+ v
+AWS IAM (autorisation)
+ |
+ v
+Amazon S3 (RAW)
+ |
+ v
+Snowflake BRONZE
+ |
+ v
+SILVER
+ |
+ v
+GOLD
+```
+
+**FIN DU GUIDE**

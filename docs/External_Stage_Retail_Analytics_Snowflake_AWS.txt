@@ -1,0 +1,335 @@
+GUIDE D’INSTALLATION — STORAGE INTEGRATION ET EXTERNAL STAGE Projet :
+RETAIL_ANALYTICS Environnement : AWS S3 + Snowflake Fichier de référence
+: code SQL fourni par l’utilisateur
+
+====================================================================== 1.
+OBJECTIF
+======================================================================
+
+Ce guide explique comment autoriser Snowflake à lire les fichiers CSV
+stockés dans le dossier raw/ du bucket S3, puis comment créer un
+External Stage dans Snowflake.
+
+Le mécanisme comporte deux parties :
+
+1)  AWS IAM : créer un rôle que Snowflake est autorisé à assumer. Ce
+    rôle donne à Snowflake les permissions nécessaires pour lister le
+    bucket et lire les fichiers du dossier raw/.
+
+2)  Snowflake : créer une Storage Integration qui référence le rôle AWS,
+    vérifier la configuration, puis créer un External Stage pointant
+    vers le dossier raw/ du bucket.
+
+À retenir : - Le script Python qui envoie les fichiers vers S3 utilise
+les identifiants AWS de l’environnement local. - Snowflake utilise une
+identité distincte : la Storage Integration assume le rôle IAM AWS. - Ne
+partagez jamais les clés AWS, les secrets ou l’External ID dans un dépôt
+Git public, une capture d’écran ou un document partagé.
+
+======================================================================
+2. PRÉREQUIS
+======================================================================
+
+Avant de commencer, vérifier que :
+
+-   Le bucket S3 existe : retail-analytics-s3-218712444577
+
+-   Le dossier/prefixe cible existe ou sera utilisé : raw/
+
+-   Le rôle IAM AWS prévu pour Snowflake existe :
+    Retail_analytics_Snowflake_role
+
+-   Vous avez les droits nécessaires pour créer/modifier une Storage
+    Integration dans Snowflake et pour gérer les rôles/politiques IAM
+    dans AWS.
+
+-   Le fichier de test est présent dans S3 à l’emplacement :
+    s3://retail-analytics-s3-218712444577/raw/products/products.csv
+
+-   Le format CSV utilisé dans Snowflake existe déjà :
+    RETAIL_ANALYTICS.RAW_EXT.CSV_FORMAT
+
+IMPORTANT : Le nom du fichier et son chemin doivent correspondre
+exactement à l’objet présent dans S3. Les noms S3 sont sensibles à la
+casse.
+
+======================================================================
+3. ÉTAPE A — CRÉER LA STORAGE INTEGRATION DANS SNOWFLAKE
+======================================================================
+
+Exécuter dans Snowflake :
+
+CREATE OR REPLACE STORAGE INTEGRATION RETAIL_ANALYTICS_S3_INT TYPE =
+EXTERNAL_STAGE STORAGE_PROVIDER = S3 ENABLED = TRUE STORAGE_AWS_ROLE_ARN
+= ‘arn:aws:iam::218712444577:role/Retail_analytics_Snowflake_role’
+STORAGE_ALLOWED_LOCATIONS = (
+‘s3://retail-analytics-s3-218712444577/raw/’ );
+
+Explication :
+
+-   TYPE = EXTERNAL_STAGE : indique que l’intégration servira à accéder
+    à un emplacement externe depuis un stage.
+-   STORAGE_PROVIDER = S3 : le stockage externe est Amazon S3.
+-   ENABLED = TRUE : active l’intégration.
+-   STORAGE_AWS_ROLE_ARN : indique le rôle IAM AWS que Snowflake devra
+    assumer.
+-   STORAGE_ALLOWED_LOCATIONS : limite les emplacements S3 auxquels
+    cette intégration est autorisée à accéder.
+
+Attention : CREATE OR REPLACE remplace l’intégration existante si elle
+porte déjà ce nom. Ne relancez pas cette commande sans vérifier les
+conséquences si l’intégration est déjà utilisée par des stages.
+
+======================================================================
+4. ÉTAPE B — RÉCUPÉRER LES INFORMATIONS FOURNIES PAR SNOWFLAKE
+======================================================================
+
+Exécuter :
+
+DESC STORAGE INTEGRATION RETAIL_ANALYTICS_S3_INT;
+
+Dans le résultat, repérer notamment :
+
+-   STORAGE_AWS_IAM_USER_ARN
+-   STORAGE_AWS_EXTERNAL_ID
+
+Ces valeurs sont générées/fournies par Snowflake et sont nécessaires
+pour établir la relation de confiance entre Snowflake et AWS.
+
+Ne copiez pas une ancienne valeur d’External ID provenant d’une autre
+intégration. Utilisez les valeurs retournées pour l’intégration que vous
+venez de créer.
+
+Ne publiez pas l’External ID dans un dépôt public ou dans un document
+accessible à des personnes non autorisées.
+
+======================================================================
+5. ÉTAPE C — CONFIGURER AWS IAM
+======================================================================
+
+Ouvrir la console AWS :
+
+IAM > Roles > Retail_analytics_Snowflake_role
+
+Vérifier ou configurer les deux éléments suivants.
+
+A. POLICY DU RÔLE — PERMISSIONS S3 EN LECTURE
+
+La policy doit autoriser :
+
+-   s3:ListBucket sur le bucket ;
+-   s3:GetObject sur les objets situés sous raw/.
+
+Exemple de policy :
+
+{ “Version”: “2012-10-17”, “Statement”: [ { “Sid”: “ListRawBucket”,
+“Effect”: “Allow”, “Action”: [“s3:ListBucket”], “Resource”:
+“arn:aws:s3:::retail-analytics-s3-218712444577” }, { “Sid”:
+“ReadRawData”, “Effect”: “Allow”, “Action”: [“s3:GetObject”],
+“Resource”: “arn:aws:s3:::retail-analytics-s3-218712444577/raw/*” } ] }
+
+Cette policy donne des droits de lecture, pas des droits d’écriture.
+C’est cohérent avec le besoin de Snowflake dans ce scénario : lire les
+fichiers déposés dans S3.
+
+B. TRUST RELATIONSHIP — AUTORISER SNOWFLAKE À ASSUMER LE RÔLE
+
+Dans le rôle IAM, ouvrir l’onglet Trust relationships, puis modifier la
+policy de confiance.
+
+Utiliser les valeurs exactes obtenues à l’étape B :
+
+-   Principal AWS : valeur STORAGE_AWS_IAM_USER_ARN retournée par DESC
+    STORAGE INTEGRATION.
+-   sts:ExternalId : valeur STORAGE_AWS_EXTERNAL_ID retournée par DESC
+    STORAGE INTEGRATION.
+
+Modèle de trust relationship :
+
+{ “Version”: “2012-10-17”, “Statement”: [ { “Sid”:
+“SnowflakeAssumeRole”, “Effect”: “Allow”, “Principal”: { “AWS”: “” },
+“Action”: “sts:AssumeRole”, “Condition”: { “StringEquals”: {
+“sts:ExternalId”: “” } } } ] }
+
+Remplacer les deux marqueurs entre chevrons par les valeurs exactes
+retournées par Snowflake. Ne pas conserver les marqueurs tels quels.
+
+Vérification : - Le rôle modifié doit être celui dont l’ARN est
+référencé dans STORAGE_AWS_ROLE_ARN. - Le Principal doit correspondre à
+STORAGE_AWS_IAM_USER_ARN. - L’External ID doit correspondre à
+STORAGE_AWS_EXTERNAL_ID. - La policy de permissions S3 doit être
+attachée au rôle assumé par Snowflake.
+
+======================================================================
+6. ÉTAPE D — VALIDER LA CONFIGURATION DEPUIS SNOWFLAKE
+======================================================================
+
+Après avoir enregistré la policy et la trust relationship dans AWS,
+revenir dans Snowflake et exécuter :
+
+SELECT SYSTEM$VALIDATE_STORAGE_INTEGRATION( ‘RETAIL_ANALYTICS_S3_INT’,
+‘s3://retail-analytics-s3-218712444577/raw/’, ‘products/products.csv’,
+‘read’ );
+
+Cette commande demande à Snowflake de vérifier l’accès en lecture au
+fichier indiqué.
+
+Le test doit réussir avant de poursuivre. Si la validation échoue,
+vérifier : - le rôle AWS référencé dans l’intégration ; - la trust
+relationship ; - le Principal et l’External ID ; - les permissions
+s3:ListBucket et s3:GetObject ; - le chemin et le nom exacts du fichier
+dans S3 ; - le préfixe autorisé dans STORAGE_ALLOWED_LOCATIONS.
+
+======================================================================
+7. ÉTAPE E — CRÉER L’EXTERNAL STAGE
+======================================================================
+
+Une fois la validation réussie, créer le stage :
+
+CREATE OR REPLACE STAGE
+RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGE URL =
+‘s3://retail-analytics-s3-218712444577/raw/’ STORAGE_INTEGRATION =
+RETAIL_ANALYTICS_S3_INT;
+
+Explication :
+
+-   Un stage est un objet Snowflake qui représente un emplacement de
+    fichiers.
+-   Ici, le stage pointe vers le préfixe raw/ du bucket S3.
+-   STORAGE_INTEGRATION indique à Snowflake quelle intégration utiliser
+    pour obtenir l’accès AWS.
+-   Le stage ne copie pas les fichiers dans une table Snowflake : il
+    fournit un point d’accès aux fichiers externes.
+
+La commande utilise le nom complet de l’objet :
+RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGE
+
+Cela évite toute ambiguïté liée à la base de données ou au schéma
+actuellement sélectionné.
+
+Attention : CREATE OR REPLACE STAGE remplace le stage existant s’il
+porte le même nom. Vérifier avant de relancer la commande dans un
+environnement déjà utilisé.
+
+======================================================================
+8. ÉTAPE F — VÉRIFIER LE STAGE ET LISTER LES FICHIERS
+======================================================================
+
+Afficher les stages :
+
+SHOW STAGES IN SCHEMA RETAIL_ANALYTICS.RAW_EXT;
+
+Lister le contenu du stage :
+
+LIST @RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGE;
+
+Le résultat doit afficher les fichiers accessibles sous raw/.
+
+Pour vérifier uniquement le dossier products :
+
+LIST @RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGE/products/;
+
+Si aucun fichier n’apparaît : - vérifier que le fichier a bien été
+envoyé dans le bucket ; - vérifier le préfixe raw/ ; - vérifier les
+permissions IAM ; - vérifier que le stage référence le bon bucket et le
+bon préfixe.
+
+======================================================================
+9. ÉTAPE G — DÉCOUVRIR LA STRUCTURE DU CSV AVEC INFER_SCHEMA
+======================================================================
+
+Avant d’utiliser INFER_SCHEMA, vérifier que le format CSV existe :
+
+SHOW FILE FORMATS IN SCHEMA RETAIL_ANALYTICS.RAW_EXT;
+
+Puis exécuter :
+
+SELECT * FROM TABLE( INFER_SCHEMA( LOCATION =>
+‘@RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGE/products/’,
+FILE_FORMAT => ‘RETAIL_ANALYTICS.RAW_EXT.CSV_FORMAT’ ) );
+
+INFER_SCHEMA analyse les fichiers et propose des informations sur leurs
+colonnes et leurs types de données.
+
+Important : INFER_SCHEMA est un outil de découverte de structure. Il ne
+crée pas automatiquement une table et ne charge pas les données dans une
+table.
+
+Le résultat dépend du contenu des fichiers et des paramètres du format
+CSV.
+
+======================================================================
+10. CORRECTIONS ET POINTS DE VIGILANCE PAR RAPPORT AU CODE FOURNI
+======================================================================
+
+A. Dernière commande LIST
+
+Le code fourni contient :
+
+LIST @RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGES;
+
+Il y a deux problèmes : - le nom se termine par STAGES au pluriel ; - le
+stage créé s’appelle RETAIL_ANALYTICS_RAW_STAGE au singulier.
+
+Commande corrigée :
+
+LIST @RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGE;
+
+B. Cohérence du nom de stage
+
+Le code crée le stage sous le nom : RETAIL_ANALYTICS_RAW_STAGE
+
+Il faut réutiliser exactement ce nom dans INFER_SCHEMA, LIST et dans les
+futures définitions d’External Tables.
+
+C. Format CSV
+
+Le code utilise : RETAIL_ANALYTICS.RAW_EXT.CSV_FORMAT
+
+Vérifier que ce format existe réellement dans ce schéma. Si le format
+est enregistré dans un autre schéma, adapter son nom complet.
+
+D. Chemin du fichier de validation
+
+Le code teste : raw/products/products.csv
+
+Ce chemin est relatif au préfixe autorisé et au bucket. Vérifier que
+l’objet existe exactement à cet emplacement.
+
+E. External Stage et External Table sont différents
+
+External Stage : - référence un emplacement de fichiers externe ; -
+permet à Snowflake d’accéder aux fichiers ; - ne transforme pas à lui
+seul les fichiers en tables.
+
+External Table : - expose les données externes sous forme de table
+interrogeable ; - s’appuie sur un stage et une définition de colonnes
+; - ne correspond pas à une table native alimentée par COPY INTO.
+
+F. Sécurité
+
+-   Ne pas enregistrer de clés AWS dans ce fichier.
+-   Ne pas publier l’External ID.
+-   Ne pas partager les identifiants ou secrets dans GitHub.
+-   Limiter STORAGE_ALLOWED_LOCATIONS au préfixe réellement nécessaire.
+-   Conserver uniquement les permissions IAM nécessaires.
+
+======================================================================
+11. ORDRE D’EXÉCUTION — CHECKLIST
+======================================================================
+
+[ ] 1. Vérifier que le bucket et le fichier CSV existent dans S3. [ ] 2.
+Créer la STORAGE INTEGRATION dans Snowflake. [ ] 3. Exécuter DESC
+STORAGE INTEGRATION. [ ] 4. Copier les deux valeurs générées par
+Snowflake de façon sécurisée. [ ] 5. Configurer la policy S3 du rôle
+IAM. [ ] 6. Configurer la trust relationship avec les valeurs Snowflake.
+[ ] 7. Exécuter SYSTEM$VALIDATE_STORAGE_INTEGRATION. [ ] 8. Créer
+l’EXTERNAL STAGE. [ ] 9. Exécuter SHOW STAGES. [ ] 10. Exécuter LIST sur
+le stage. [ ] 11. Vérifier le FILE FORMAT CSV. [ ] 12. Exécuter
+INFER_SCHEMA sur le dossier products/.
+
+À la fin, Snowflake doit pouvoir lister et lire les fichiers du préfixe
+raw/ de S3 à travers le stage
+RETAIL_ANALYTICS.RAW_EXT.RETAIL_ANALYTICS_RAW_STAGE.
+
+FIN DU GUIDE
