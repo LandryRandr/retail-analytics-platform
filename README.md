@@ -73,9 +73,10 @@ Version Control| Git, GitHub
 
 Repository Structure
 
-.retail-analytics-platform/
-.│
-.├── dashboards/
+retail-analytics-platform/
+---
+│
+├── dashboards/
 │   ├── streamlit_app_1.py
 │   ├── streamlit_app_2.py
 │   └── streamlit_app_3.py
@@ -352,7 +353,7 @@ Landry Randr
 
 Aspiring Data & BI Analyst | Data Engineering
 
-Technologies: Python · SQL · Snowflake · AWS · Power BI · Streamlit
+Technologies: Python · SQL · Snowflake · AWS · Streamlit
 
 GitHub: "LandryRandr" (https://github.com/LandryRandr)
 
