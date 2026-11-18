@@ -76,39 +76,73 @@ Repository Structure
 retail-analytics-platform/
 
 │
+
 ├── dashboards/
+
 │   ├── streamlit_app_1.py
+
 │   ├── streamlit_app_2.py
+
 │   └── streamlit_app_3.py
+
 │
+
 ├── docs/
+
 │   ├── aws_instructions.txt
+
 │   ├── External_Stage_Retail_Analytics_Snowflake_AWS.txt
+
 │   └── github_instructions.txt
+
 │
+
 ├── scripts/
+
 │   ├── config.py
+
 │   ├── generate_all.py
+
 │   ├── generate_customers.py
+
 │   ├── generate_order_items.py
+
 │   ├── generate_orders.py
+
 │   ├── generate_products.py
+
 │   └── upload_to_s3.py
+
 │
+
 ├── sql/
+
 │   ├── 01_database and schemas.sql
+
 │   ├── 02_file_formats.sql
+
 │   ├── 03_external_stages.sql
+
 │   ├── 04_external_tables.sql
+
 │   ├── 05_silver_tables.sql
+
 │   ├── 06_00_Silver_manual_ingestion.sql
+
 │   ├── 06_01_Silver_insert_procedures.sql
+
 │   ├── 06_03_Tasks.sql
+
 │   ├── 07_01_gold_tables.sql
+
 │   ├── 07_02_Gold_procedure.sql
+
 │   └── 08_gold_views.sql
+
 │
+
 ├── requirements.txt
+
 └── README.md
 
 ---
