@@ -73,9 +73,9 @@ Version Control| Git, GitHub
 
 Repository Structure
 
-retail-analytics-platform/
-│
-├── dashboards/
+.retail-analytics-platform/
+.│
+.├── dashboards/
 │   ├── streamlit_app_1.py
 │   ├── streamlit_app_2.py
 │   └── streamlit_app_3.py
